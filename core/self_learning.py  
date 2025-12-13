@@ -1,0 +1,33 @@
+# core/self_learning.py
+import requests
+import sqlite3
+from datetime import datetime
+
+SOURCES = [
+    "https://raw.githubusercontent.com/danielmiessler/SecLists/master/README.md",
+    "https://www.ietf.org/standards/rfcs/",
+    "https://cve.mitre.org/data/downloads/allitems.csv"
+]
+
+def fetch_knowledge(url: str) -> str:
+    try:
+        resp = requests.get(url, timeout=10)
+        return resp.text[:5000]  # Ambil cuplikan
+    except:
+        return ""
+
+def trigger_knowledge_update():
+    conn = sqlite3.connect("itmind.db")
+    c = conn.cursor()
+    
+    for url in SOURCES:
+        content = fetch_knowledge(url)
+        if content:
+            c.execute("""
+                INSERT INTO knowledge_entries (source_url, content, fetched_at)
+                VALUES (?, ?, ?)
+            """, (url, content, datetime.utcnow().isoformat()))
+    
+    conn.commit()
+    conn.close()
+    print("✅ Knowledge base updated")
